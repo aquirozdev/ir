@@ -1,0 +1,250 @@
+{
+  "sir_version": "0.2-draft",
+  "name": "ExpenseApp",
+  "entities": [
+    {
+      "name": "Expense",
+      "fields": [
+        {
+          "name": "employee",
+          "field_type": {
+            "kind": "ref",
+            "entity": "Employee"
+          }
+        },
+        {
+          "name": "amount_minor",
+          "field_type": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "status",
+          "field_type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employee",
+      "fields": [
+        {
+          "name": "email",
+          "field_type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "manager",
+          "field_type": {
+            "kind": "ref",
+            "entity": "Employee"
+          }
+        }
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "name": "ApproveExpense",
+      "actor": "Employee",
+      "inputs": [
+        {
+          "name": "expense",
+          "field_type": {
+            "kind": "ref",
+            "entity": "Expense"
+          }
+        }
+      ],
+      "policy": {
+        "op": "eq",
+        "left": {
+          "op": "path",
+          "segments": [
+            "expense",
+            "employee",
+            "manager"
+          ]
+        },
+        "right": {
+          "op": "path",
+          "segments": [
+            "actor"
+          ]
+        }
+      },
+      "requires": [
+        {
+          "op": "eq",
+          "left": {
+            "op": "path",
+            "segments": [
+              "expense",
+              "status"
+            ]
+          },
+          "right": {
+            "op": "literal",
+            "value": {
+              "kind": "string",
+              "value": "pending"
+            }
+          }
+        }
+      ],
+      "effects": [
+        {
+          "op": "set",
+          "target": [
+            "expense",
+            "status"
+          ],
+          "value": {
+            "op": "literal",
+            "value": {
+              "kind": "string",
+              "value": "approved"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SetExpenseAmount",
+      "actor": "Employee",
+      "inputs": [
+        {
+          "name": "expense",
+          "field_type": {
+            "kind": "ref",
+            "entity": "Expense"
+          }
+        },
+        {
+          "name": "amount_minor",
+          "field_type": {
+            "kind": "int"
+          }
+        }
+      ],
+      "policy": {
+        "op": "eq",
+        "left": {
+          "op": "path",
+          "segments": [
+            "expense",
+            "employee"
+          ]
+        },
+        "right": {
+          "op": "path",
+          "segments": [
+            "actor"
+          ]
+        }
+      },
+      "requires": [
+        {
+          "op": "eq",
+          "left": {
+            "op": "path",
+            "segments": [
+              "expense",
+              "status"
+            ]
+          },
+          "right": {
+            "op": "literal",
+            "value": {
+              "kind": "string",
+              "value": "pending"
+            }
+          }
+        }
+      ],
+      "effects": [
+        {
+          "op": "set",
+          "target": [
+            "expense",
+            "amount_minor"
+          ],
+          "value": {
+            "op": "path",
+            "segments": [
+              "amount_minor"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "name": "NonnegativeExpense",
+      "entity": "Expense",
+      "expression": {
+        "op": "gte",
+        "left": {
+          "op": "path",
+          "segments": [
+            "record",
+            "amount_minor"
+          ]
+        },
+        "right": {
+          "op": "literal",
+          "value": {
+            "kind": "int",
+            "value": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "ValidExpenseStatus",
+      "entity": "Expense",
+      "expression": {
+        "op": "or",
+        "args": [
+          {
+            "op": "eq",
+            "left": {
+              "op": "path",
+              "segments": [
+                "record",
+                "status"
+              ]
+            },
+            "right": {
+              "op": "literal",
+              "value": {
+                "kind": "string",
+                "value": "pending"
+              }
+            }
+          },
+          {
+            "op": "eq",
+            "left": {
+              "op": "path",
+              "segments": [
+                "record",
+                "status"
+              ]
+            },
+            "right": {
+              "op": "literal",
+              "value": {
+                "kind": "string",
+                "value": "approved"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

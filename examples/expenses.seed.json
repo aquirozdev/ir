@@ -1,0 +1,35 @@
+[
+  {
+    "entity": "Employee",
+    "id": "manager",
+    "fields": {
+      "email": "manager@example.test",
+      "manager": "manager"
+    }
+  },
+  {
+    "entity": "Employee",
+    "id": "employee",
+    "fields": {
+      "email": "employee@example.test",
+      "manager": "manager"
+    }
+  },
+  {
+    "entity": "Employee",
+    "id": "stranger",
+    "fields": {
+      "email": "stranger@example.test",
+      "manager": "stranger"
+    }
+  },
+  {
+    "entity": "Expense",
+    "id": "expense1",
+    "fields": {
+      "employee": "employee",
+      "amount_minor": 2500,
+      "status": "pending"
+    }
+  }
+]

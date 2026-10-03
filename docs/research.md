@@ -7,7 +7,7 @@ These are starting points for investigation, not an audited prior-art survey or 
 | JSON contracts | [JSON Schema](https://json-schema.org/draft/2020-12) | Test parser/schema alignment and unsupported constructs |
 | CPU inference | [llama.cpp](https://github.com/ggml-org/llama.cpp) | Pin engine commit, architecture support and decoding backend |
 | Authorization | [Cedar documentation](https://docs.cedarpolicy.com/) | Verify schema, policy validation, default-deny behavior and transaction mapping |
-| Transactions | [SQLite isolation](https://www.sqlite.org/isolation.html) | Test locking, concurrent commands and rollback |
+| Transactions | [SQLite isolation](https://www.sqlite.org/isolation.html) | Implemented immediate transactions with concurrent approval and injected-write-failure tests |
 | CI constraints | [GitHub-hosted runners](https://docs.github.com/en/actions/reference/runners/github-hosted-runners) | Verify account-specific limits; enforce and record quotas |
 | Candidate weights | [Qwen organization](https://huggingface.co/Qwen) | Select exact checkpoint, license, GGUF provenance and hash |
 

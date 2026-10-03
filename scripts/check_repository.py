@@ -35,19 +35,29 @@ def check(value, spec):
         for key, item in value.items():
             check(item, spec['properties'][key])
     elif kind == 'array':
-        if not isinstance(value, list) or len(value) < spec.get('minItems', 0):
+        if not isinstance(value, list) or len(value) < spec.get('minItems', 0) or len(value) > spec.get('maxItems', 10**9):
             raise ValueError('invalid array')
         for item in value:
             check(item, spec['items'])
     elif kind == 'string':
-        if not isinstance(value, str) or not re.fullmatch(spec['pattern'], value):
+        if not isinstance(value, str) or len(value) > spec.get('maxLength', 10**9):
+            raise ValueError('invalid string')
+        if 'pattern' in spec and not re.fullmatch(spec['pattern'], value):
             raise ValueError('invalid identifier')
+    elif kind == 'integer':
+        if type(value) is not int or not spec.get('minimum', -2**63) <= value <= spec.get('maximum', 2**63-1):
+            raise ValueError('invalid integer')
+    elif kind == 'boolean':
+        if type(value) is not bool:
+            raise ValueError('invalid boolean')
 
 
 def main():
     fixture = json.loads((ROOT / 'examples/expenses.entities.json').read_text())
     check(fixture, SCHEMA)
-    for altered in [dict(fixture, commands=[]), dict(fixture, entities=[]),
+    program = json.loads((ROOT / 'examples/expenses.sir.json').read_text())
+    check(program, SCHEMA)
+    for altered in [dict(fixture, arbitrary=[]), dict(fixture, entities=[]),
                     dict(fixture, name='invalid name'), dict(fixture, sir_version='future')]:
         try:
             check(altered, SCHEMA)

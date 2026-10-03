@@ -1,5 +1,5 @@
 {
-  "sir_version": "0.1-draft",
+  "sir_version": "0.2-draft",
   "name": "ExpenseApp",
   "entities": [
     {
@@ -19,9 +19,9 @@
           }
         },
         {
-          "name": "approved",
+          "name": "status",
           "field_type": {
-            "kind": "bool"
+            "kind": "string"
           }
         }
       ]
@@ -44,5 +44,7 @@
         }
       ]
     }
-  ]
+  ],
+  "commands": [],
+  "invariants": []
 }

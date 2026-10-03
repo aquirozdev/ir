@@ -1,26 +1,37 @@
-name: CI
+name: SIR runtime CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  foundation:
+  runtime:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Install pinned Rust toolchain
         run: |
           rustup toolchain install 1.85.1 --profile minimal --component rustfmt --component clippy
           rustup default 1.85.1
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-      - name: Test workspace
-        run: cargo test --workspace
-      - name: Lint workspace
-        run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: Validate public fixture
-        run: cargo run -p sir-cli -- validate examples/expenses.entities.json
-      - name: Check repository contracts
-        run: python3 scripts/check_repository.py
+      - name: Compile, test and execute SIR demo
+        run: bash scripts/ci.sh
+      - name: Publish regression summary
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          report = json.loads(Path('results/ci-report.json').read_text())
+          print(f"SIR {report['sir_version']}: {report['tests_passed']} regression tests passed; {report['demo_checks_passed']} demo checks passed.")
+          print('SQLite commands, authorization, invariants, concurrency and rollback tested. No model inference or accuracy benchmark yet.')
+          PY
+      - name: Upload public regression evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sir-runtime-${{ github.sha }}
+          path: results/
+          if-no-files-found: ignore

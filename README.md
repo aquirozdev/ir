@@ -2,61 +2,68 @@
 
 **Can a specialized representation and deterministic runtime reduce the model size needed to construct correct software?**
 
-SIR is an early research project for declarative business applications: entities, relationships, commands, permissions, workflows and invariants. The intended pipeline is specification → small local model → typed SIR → deterministic runtime.
+SIR is an early research project for declarative business applications. Its first working slice interprets typed JSON commands directly over SQLite. The intended full pipeline is specification → small local model → typed SIR → deterministic runtime.
 
-There are no model results yet. Frontier parity, CPU latency, RAM usage and accuracy targets are hypotheses, not measured capabilities. This project does not currently build applications from natural language.
+## Run the working demo
 
-## Current status
-
-Implemented in this initialization:
-
-- Rust workspace: `sir-ir`, `sir-validator`, `sir-cli`.
-- Draft JSON entity AST and matching JSON Schema.
-- Static checks for versions, identifiers, duplicate names, empty declarations and unresolved references.
-- `sir validate` with structured diagnostics and nonzero exit codes.
-- Example entity model, regression tests and GitHub Actions CI.
-
-Planned: executable commands, expression typing, transactional SQLite runtime, authorization, model integration and behavioral evaluation. Commands, HTTP serving and inference are **not implemented**.
-
-## Quick start
-
-Install Rust using [rustup](https://rustup.rs/). The repository pins its development toolchain.
+Install Rust using [rustup](https://rustup.rs/). This repository pins Rust 1.85.1 and commits its dependency lockfile.
 
 ```bash
-cargo test --workspace
-cargo run -p sir-cli -- validate examples/expenses.entities.json
+cargo run --locked -p sir-cli -- demo
 ```
 
-A valid document prints `[]` and exits 0. Static validation failures exit 1; usage, file and JSON parsing errors exit 2. Validation checks declarations only; it does not test expense approval behavior.
+The demo executes actual SIR policies, preconditions and effects. It verifies that an employee cannot approve their own expense, their manager can approve it, a second approval fails, and a negative amount fails its invariant without changing state. The JSON output contains four checks derived from these executions.
+
+For the same checks used by GitHub Actions:
+
+```bash
+bash scripts/ci.sh
+```
+
+## Execute your own command against a persistent database
+
+```bash
+cargo run --locked -p sir-cli -- validate examples/expenses.sir.json
+cargo run --locked -p sir-cli -- init examples/expenses.sir.json expenses.db examples/expenses.seed.json
+cargo run --locked -p sir-cli -- exec examples/expenses.sir.json expenses.db ApproveExpense Employee manager examples/approve.inputs.json
+cargo run --locked -p sir-cli -- inspect examples/expenses.sir.json expenses.db
+```
+
+Use a fresh database for initialization. Repeating the approval produces `PRECONDITION_FAILED`. Running it with principal `Employee employee` on a pending expense produces `UNAUTHORIZED`.
+
+The CLI is a **local administrative interface**. Principal arguments come from its trusted caller; they are not remote authentication. A future HTTP adapter must establish identity independently and authorize reads separately. `init` and `inspect` are administrative operations, not public application commands.
+
+## Implemented
+
+- Versioned strict JSON AST, matching schema and semantic type checker.
+- String, signed 64-bit integer, boolean and typed entity references.
+- Required boolean command policies, preconditions and bounded `set` effects.
+- Entity-wide invariants evaluated after all staged effects.
+- SQLite immediate transactions, reference integrity, atomic seeding and persistent state.
+- Structured runtime errors, declared resource limits and program/database compatibility checks.
+- Regression tests for authorization, typing, persistence, concurrency, resource bounds and rollback after a SQLite write error.
+- Push, pull-request and manual CI with test logs, demo JSON and provenance artifacts.
+
+The initial implementation stages a bounded state snapshot in memory before committing changed records. It is suitable for small experiments, not large production databases.
+
+## Not implemented yet
+
+Natural-language inference, `sir build`, create/delete effects, general queries, enum/optional/money/time types, migrations, HTTP serving, model training and an ML benchmark. There are **no model accuracy or frontier-comparison results**. Current tests measure runtime regression behavior only.
 
 ## Documentation
 
 | Document | Purpose |
 | --- | --- |
-| [Architecture](docs/architecture.md) | Components, runtime boundaries and intended execution |
-| [Draft IR](docs/ir-v0.md) | Implemented wire format and proposed semantics |
-| [Experiment protocol](docs/experiment.md) | Baselines, fairness, holdouts, metrics and decision gates |
-| [Roadmap](docs/roadmap.md) | Ordered milestones and acceptance criteria |
-| [Decisions](docs/decisions.md) | Design choices and unresolved questions |
-| [Research notes](docs/research.md) | Primary references to investigate before integration |
+| [Architecture](docs/architecture.md) | Runtime and trust boundaries |
+| [Draft IR](docs/ir-v0.md) | Accepted wire format and execution semantics |
+| [Expense specification](examples/expenses.spec.md) | Behavior covered by the first working slice |
+| [Experiment protocol](docs/experiment.md) | Baselines, fairness, holdouts and decision gates |
+| [Roadmap](docs/roadmap.md) | Completed slices and next evidence gates |
+| [CI](docs/ci.md) | Checks, artifacts and known runner blocker |
+| [Decisions](docs/decisions.md) | Design choices and open questions |
+| [Research notes](docs/research.md) | Primary integration references |
 | [Contributing](CONTRIBUTING.md) | Development and review expectations |
 
-## Research scope
-
-The initial domain is structured business software. Arbitrary algorithms, codecs, compilers, operating systems and general terminal work are outside this first representation. Runtime functionality is part of the system's capability and must be counted when comparing systems.
-
-The first experiment compares the **same model** producing SIR, conventional code and conventional code using an equivalent helper library. A strong runtime advantage alone would not establish a representation advantage.
-
-## Project layout
-
-```text
-crates/       AST, semantic checks and CLI
-schemas/      Draft interchange contract
-examples/     Hand-authored public inputs
-benchmark/    Evaluation design; no hidden test set published here
-models/       Acquisition and provenance requirements; no weights
-scripts/      Repository consistency checks
-.github/      CI and contribution templates
-```
+The first model experiment will compare identical weights generating SIR, conventional source and source using an equivalent helper library. Runtime assistance must be counted when attributing capability gains to representation.
 
 No license has been selected yet. Choose one before distributing the project as reusable open-source software.

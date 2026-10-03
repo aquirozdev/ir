@@ -1,39 +1,36 @@
 # Architecture
 
-## Implemented foundation
+## Working pipeline
 
-`sir-ir` owns serializable declarations. `sir-validator` checks cross-declaration consistency and returns stable diagnostic codes with JSON Pointer paths. `sir-cli` loads JSON and exposes validation. The JSON Schema is an interchange contract; the Rust CLI uses strict deserialization plus semantic checks, not a JSON Schema engine.
+`sir-ir` defines strict typed declarations. `sir-validator` resolves entity/binding/field references and checks expressions, policies and effect types. `sir-runtime` interprets validated commands over SQLite. `sir-cli` validates programs, initializes state, invokes commands, inspects state and runs an executable demo.
 
-## Intended pipeline
+There is no model adapter yet. The implemented input is a hand-authored SIR JSON program.
 
-1. A specification enters an inference adapter with explicit limits.
-2. A local model emits a constrained AST. Grammar validity does not guarantee correct symbol references, types, authorization or requested behavior.
-3. Static validation resolves symbols, checks expressions, effects and policy completeness.
-4. A bounded repair loop receives static diagnostics only. Evaluation holdout failures must never enter this loop.
-5. An immutable validated program is installed in a deterministic runtime.
-6. An independently authenticated principal calls a command through a versioned interface.
+## Command transaction
 
-The runtime interprets SIR directly. Source generation is optional future interoperability, not required for the first experiment.
+Resolve command and trusted principal type → begin SQLite immediate transaction → load bounded consistent state → validate input values and references → authorize → check preconditions → stage ordered effects → check reference/type integrity and all invariants → write changed records → commit.
 
-## Intended command transaction
+Failures drop the uncommitted transaction. A regression test injects a SQLite failure on a command's second record write and verifies that the first write is rolled back. Another uses two connections/threads to approve one expense concurrently; exactly one succeeds. Invariants and authorization reads share the transaction boundary with writes.
 
-Resolve and validate input → begin transaction → read consistent state → authorize with default deny → check preconditions → apply bounded effects → verify invariants on resulting state → commit. Any failure rolls back all effects. Authorization reads and writes must share the transaction boundary to prevent time-of-check/time-of-use errors.
+The runtime stages a bounded full state snapshot, not a production query planner. SQL uses fixed statements and bound values; the IR cannot supply SQL strings. The database records its installed program and rejects incompatible programs. No automatic migrations exist.
 
-SQLite is the proposed initial store. Isolation, concurrent booking races, reference integrity and persistence recovery require tests before claiming correctness. No floating-point money: choose bounded integer minor units plus currency, with explicit overflow and rounding rules. Time and IDs must be supplied through controlled interfaces; deterministic execution means identical program, state, inputs and injected values produce identical results.
+## Identity and administration
 
-## Trust and resource boundaries
+`Runtime::execute` takes a trusted `Principal {entity,id}` from its host and input values separately. Inputs cannot override the `actor` binding. Principal existence is checked in transactional state. The local CLI's actor arguments are trusted administrative input, not authentication.
 
-SIR must not execute shell, SQL strings, arbitrary source, reflection or network calls. The model's output is untrusted. Restrict input bytes, entity counts, expression depth, relation traversals, rows scanned, effects and execution time. Absence of loops alone does not bound resource cost. The early validation CLI has no production resource-hardening claim.
+A remote host must authenticate separately, protect admin seeding and snapshot access, and handle error disclosure. This release has no HTTP adapter or production authentication. Policies enforce their explicit predicates; type checking cannot prove those predicates express the specification correctly.
 
-The HTTP adapter must establish identity independently of user payloads. A caller-provided `actor` is not authentication. Runtime diagnostics should avoid exposing confidential state. Security checks must be tested independently of the model.
+## Determinism and bounds
 
-## Components to add when needed
+No implicit time, randomness or IDs are generated. Identical program/state/input/principal produce identical semantic outcomes. Lock contention and storage failure are environmental failures, not deterministic successful outcomes.
 
-- `sir-runtime`: expression interpreter and atomic effects.
-- `sir-storage`: SQLite state adapter.
-- `sir-auth`: authorization interface; evaluate Cedar integration against actual requirements.
-- `sir-model`: generation and bounded semantic repairs.
-- `sir-bench`: neutral behavioral protocol and resource accounting.
-- `sir-http`: thin authenticated adapter after core execution is reliable.
+Programs, records, field counts, paths, expressions, strings and evaluation visits are bounded. No shell, arbitrary source, reflection, custom SQL or network calls are available in SIR. The bounded interpreter is not an OS sandbox; untrusted source-code baselines will still need isolated processes and resource controls.
 
-Do not create empty crates for these components before their interfaces are needed.
+## Next slices
+
+1. Create/delete effects with identity, referential integrity and deletion rules specified first.
+2. Neutral behavioral evaluation protocol and more hand-authored domains.
+3. Local generation adapter with grammar constraints and bounded static repairs.
+4. Same-checkpoint SIR/source/helper-library pilot before training.
+
+Cedar and llama.cpp remain integration candidates. SQLite is now integrated through pinned rusqlite with bundled SQLite. A text syntax, source backend and HTTP adapter are deferred.

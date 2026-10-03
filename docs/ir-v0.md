@@ -1,28 +1,55 @@
-# Draft IR contract
+# Executable draft IR contract
 
-Status: `0.1-draft`, unstable, entities only. Changing the accepted wire format requires updating schema, Rust structures, fixtures and documentation together.
+Status: `0.2-draft`, unstable. The previous entity-only `0.1-draft` wire format is no longer accepted. Schema, AST, fixtures and static checks must change together.
 
-Top-level keys are exactly `sir_version`, `name`, `entities`. Each entity contains `name` and `fields`. Each field contains `name` and `field_type`. Identifiers match `[A-Za-z_][A-Za-z0-9_]*`. Arrays of entities and fields must be nonempty. Entity names are globally unique; field names are unique within an entity.
+## Declarations
 
-| Field kind | Wire representation | Declaration meaning |
+Top-level keys are exactly `sir_version`, `name`, `entities`, `commands`, `invariants`. All are required; commands/invariants may be empty for an entity-only declaration. Entities contain `name`, `fields`; fields contain `name`, `field_type`.
+
+Identifiers are ASCII `[A-Za-z_][A-Za-z0-9_]*` of at most 64 bytes. Entity, command and invariant names are unique within their own namespace; field and input names are unique within their enclosing declaration. `actor` and `record` are reserved input names.
+
+| Field kind | Wire representation | Runtime value |
 | --- | --- | --- |
-| String | `{"kind":"string"}` | Text; no runtime length rules yet |
-| Int | `{"kind":"int"}` | Integer; runtime range to be specified |
-| Bool | `{"kind":"bool"}` | Boolean |
-| Ref | `{"kind":"ref","entity":"Employee"}` | Reference to a declared entity |
+| String | `{"kind":"string"}` | UTF-8 string, at most 4096 bytes |
+| Int | `{"kind":"int"}` | Signed 64-bit JSON integer; floats, booleans and out-of-range integers fail |
+| Bool | `{"kind":"bool"}` | JSON boolean |
+| Ref | `{"kind":"ref","entity":"Employee"}` | Identifier string resolved within the declared entity |
 
-Forward and self references are valid. Unknown entities and additional JSON object keys are rejected. No nullable types, runtime records, ID generation, uniqueness constraints, enums, commands or expressions are accepted yet. The schema cannot itself enforce cross-entity reference existence or uniqueness by name; use semantic validation.
+All fields are required and non-null. References are typed by entity, so the same ID in two entities is not the same reference. Forward and self references are permitted. Record IDs are storage metadata, not declared fields, and cannot be assigned through a command.
 
-Example: [expense entities](../examples/expenses.entities.json). This describes entities only; the integer amount is illustrative and is not a finalized money representation.
+## Expressions
 
-## Proposed next layer — not accepted by the current parser
+- `path`: `segments` begins with `actor`, a command input, or invariant binding `record`. Reference fields can be traversed; scalars cannot.
+- `literal`: tagged `string`, `int` or `bool` value. There are no reference literals.
+- `eq`, `ne`: `left` and `right` must have identical types, including reference entity type.
+- `gt`, `gte`, `lt`, `lte`: compare signed integers without arithmetic or overflow.
+- `and`, `or`: nonempty boolean `args`, evaluated left to right with short circuit.
+- `not`: negates a boolean `arg`.
 
-Add explicit command inputs, typed expressions, preconditions, authorization and bounded transactional effects. Begin with field paths, literals, equality, boolean operators and single-record create/update operations. Specify null handling, integer overflow, reference equality and failure behavior before implementing each operator.
+JSON Schema validates syntax and some local bounds. Semantic validation additionally checks names, references, types, depth and UTF-8 byte length. Schema `maxLength` counts characters and therefore does not replace the runtime byte limit. The CLI uses strict Serde parsing plus the semantic checker, not a general schema engine. Unknown JSON object keys and unsupported operations fail parsing.
 
-A later expense approval command should permit only the employee's manager, require a pending status and atomically change it to approved. Boundary tests must cover unauthorized actors, repeated approval, missing references and rollback.
+## Commands and invariants
 
-Queries, state machines, money, timestamps, quantifiers and semantic patches follow only after their semantics and cost limits are defined. Generic unbounded recursion and arbitrary code execution are excluded.
+A command has exactly `name`, `actor` (entity name), `inputs`, `policy`, `requires`, `effects`. Its policy is a required boolean expression; there is no implicit permit. A deliberately explicit `true` policy permits any existing principal of the declared type. Static validation checks policy type, not whether it matches the author's intended permissions.
 
-## Diagnostics
+The only effect is `{"op":"set","target":[...],"value":expression}`. Target must be a declared field rooted in a reference input, and the value's type must match it. Direct `actor`-rooted assignments are rejected. Aliasing is possible: this restriction does not itself guarantee principal records cannot be reached through input references; command policies must protect every intended write.
 
-Semantic diagnostics are an ordered array of `{code, path, message}`. Paths use JSON Pointer syntax. Codes are stable within this draft; messages are for humans. JSON syntax/deserialization errors currently go to stderr as text, so structured parser diagnostics are a future task.
+Inputs and the principal are bound to immutable values/reference identities. All preconditions see the original transaction snapshot. Effects execute in declared order, and later paths/expressions see earlier staged changes. Invariants run after **all** effects, once per matching entity record using only `record`. Intermediate invariant violations are permitted if final state is valid. Any error rejects the command without committing effects.
+
+## Records and storage
+
+Administrative seed format is an array of `{entity, id, fields}`. `fields` is an exact object matching the entity's declarations. Seed references may target any record in the same seed, including forward/self references. Nonempty existing databases cannot be reseeded.
+
+SQLite stores entity, ID and JSON fields in a fixed parameterized schema. A canonical serialized program is attached to the database; opening it with a different program fails `PROGRAM_MISMATCH`. Migration is not supported. Authorization, state reads, invariant checks and writes share an immediate transaction. Missing records and failed expression evaluation never imply authorization.
+
+## Limits and diagnostics
+
+- Program: 1 MiB serialized; entities, fields, commands, invariants, preconditions, effects and boolean argument lists capped at 64 each.
+- Paths: at most 8 segments; expression depth: at most 16 recursive edges.
+- State: at most 10,000 records and 16 MiB serialized state; strings at most 4096 UTF-8 bytes.
+- Evaluation: 1,000,000 expression visits shared by a command and its invariants, or by seed invariant checking.
+- SQLite lock wait: 5 seconds. No comprehensive wall-time/OS-memory sandbox is claimed by these interpreter limits.
+
+Static diagnostics are `{code,path,message}` arrays with JSON Pointer paths. Runtime errors are `{code,message}` objects. CLI exit 0 means success, 1 means semantic/runtime failure, 2 means usage, file or parsing failure. File/parse diagnostics currently go to stderr as text.
+
+See [the executable fixture](../examples/expenses.sir.json). Create/delete, optional types, enums, quantifiers, query plans, arithmetic, money, timestamps, migrations and semantic patches remain future work.

@@ -2,23 +2,21 @@
 
 Milestones are evidence gates, not calendar promises.
 
-| Stage | Deliverable | Acceptance criterion | Status |
-| --- | --- | --- | --- |
-| 0 | Repository, draft entity AST, validator, docs, CI | Entity examples and rejection tests pass | Initialized |
-| 1 | Expression and command semantics | Written operational rules and 30 hand-authored programs spanning agreed scope | Pending |
-| 2 | SQLite command execution | Atomic create/update, rollback, reference integrity, authorization and concurrency tests | Pending |
-| 3 | Neutral evaluation harness | Public task interface, independently authored tests, mutation checks and isolated execution | Pending |
-| 4 | Local inference adapter | Pinned licensed weights, constrained output, bounded repairs and resource accounting | Pending |
-| 5 | Pilot A/B/C | Reproducible paired results and decision on representation/runtime benefit | Pending |
-| 6 | Procedural data and SFT | Audited specification pairs, split provenance and fresh confirmatory evaluation | Pending |
-| 7 | Tiny-model and external validation | Measured CPU-only results, external tasks and explicit limitations | Pending |
+| Slice | Deliverable | Status |
+| --- | --- | --- |
+| Foundation | Versioned JSON AST, static checker, Rust workspace | Implemented |
+| First execution | Typed policies/preconditions, set effects, SQLite, invariants, administrative seeding | Implemented for the expense domain |
+| Regression CI | Locked tests, concurrency and rollback checks, executable demo, public artifacts | Implemented; hosted execution blocked by account billing |
+| Coverage expansion | 30 hand-authored programs, create/delete semantics, reservations/inventory primitives | Pending |
+| Evaluation harness | Neutral behavioral interface, independent tests, mutation checks, isolated submissions | Pending |
+| Local inference | Pinned licensed model, constrained output, bounded repairs, resource accounting | Pending |
+| Same-model pilot | Source/SIR/helper-library arms with paired measurements | Pending |
+| Training and tiny models | Audited synthetic pairs, fresh holdouts, measured scaling | Pending |
 
-## Immediate next implementation
+## Next implementation
 
-1. Write an expense-approval behavioral specification and independent positive/negative cases.
-2. Specify record identity, integer bounds, reference semantics and command failure behavior.
-3. Add typed command inputs, equality/boolean expressions and update effects with static checks.
-4. Build the first transaction executor and verify authorization and rollback.
-5. Expand to reservations and inventory only when the first end-to-end case works.
+Specify deterministic creation IDs and reference-safe deletion, then implement create/delete effects with tests. Expand hand-authored examples to inventory and reservations after defining the additional semantics they require. Do not imply current set-only commands express those systems already.
 
-Defer custom textual syntax, frontend generation, LLVM/MLIR, distributed storage, general plugins, IDE tooling, multi-agent orchestration and model training. Do not promise a natural-language demo until inference and execution are both implemented.
+Build the evaluation protocol before model training. Integrate local inference only after meaningful human-authored task coverage exists; compare the same checkpoint across representations before fine-tuning.
+
+Defer frontend generation, LLVM/MLIR, distributed storage, general plugins, IDE tooling and multi-agent orchestration.

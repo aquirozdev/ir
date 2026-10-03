@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/sir-ir", "crates/sir-validator", "crates/sir-cli"]
+members = ["crates/sir-ir", "crates/sir-validator", "crates/sir-cli", "crates/sir-runtime"]
 resolver = "2"
 
 [workspace.package]
@@ -12,3 +12,5 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sir-ir = { path = "crates/sir-ir" }
 sir-validator = { path = "crates/sir-validator" }
+sir-runtime = { path = "crates/sir-runtime" }
+rusqlite = { version = "=0.32.1", features = ["bundled"] }
