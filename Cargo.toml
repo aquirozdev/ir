@@ -1,0 +1,14 @@
+[workspace]
+members = ["crates/sir-ir", "crates/sir-validator", "crates/sir-cli"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sir-ir = { path = "crates/sir-ir" }
+sir-validator = { path = "crates/sir-validator" }

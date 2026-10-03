@@ -1,0 +1,6 @@
+/target/
+/models/*.gguf
+/results/
+*.db
+*.db-shm
+*.db-wal

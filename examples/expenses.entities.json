@@ -1,0 +1,48 @@
+{
+  "sir_version": "0.1-draft",
+  "name": "ExpenseApp",
+  "entities": [
+    {
+      "name": "Expense",
+      "fields": [
+        {
+          "name": "employee",
+          "field_type": {
+            "kind": "ref",
+            "entity": "Employee"
+          }
+        },
+        {
+          "name": "amount_minor",
+          "field_type": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "approved",
+          "field_type": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employee",
+      "fields": [
+        {
+          "name": "email",
+          "field_type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "manager",
+          "field_type": {
+            "kind": "ref",
+            "entity": "Employee"
+          }
+        }
+      ]
+    }
+  ]
+}
